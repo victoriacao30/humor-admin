@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 export async function createClient() {
     const cookieStore = await cookies();
@@ -21,7 +22,7 @@ export async function createClient() {
     );
 }
 
-export async function requireAdmin() {
+export const requireAdmin = cache(async () => {
     const supabase = await createClient();
     const {
         data: { user },
@@ -29,4 +30,4 @@ export async function requireAdmin() {
     if (!user) return null;
     const { data } = await supabase.from("profiles").select("is_superadmin").eq("id", user.id).single();
     return data?.is_superadmin ? supabase : null;
-}
+});
