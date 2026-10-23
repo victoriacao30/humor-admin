@@ -1,5 +1,7 @@
 import { requireAdmin } from "@/lib/supabase-server";
 import Window from "@/app/components/Window";
+import { addDays, nyDate, shortDay } from "@/lib/dates";
+import VotesTimeline from "@/app/components/charts/VotesTimeline";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +17,27 @@ export default async function Votes() {
     const posts = new Map((entries ?? []).map((e) => [e.id, e]));
     const names = new Map((profiles ?? []).map((p) => [p.id, p.first_name ?? "Someone"]));
 
+    const perDay = new Map<string, number>();
+    (votes ?? []).forEach((v) => {
+        const d = nyDate(v.created_at);
+        perDay.set(d, (perDay.get(d) ?? 0) + 1);
+    });
+    const firstDay = [...perDay.keys()].sort()[0];
+    const today = nyDate(new Date());
+    const points: { label: string; votes: number; total: number }[] = [];
+    let running = 0;
+    for (let d = firstDay; d && d <= today; d = addDays(d, 1)) {
+        running += perDay.get(d) ?? 0;
+        points.push({ label: shortDay(d), votes: perDay.get(d) ?? 0, total: running });
+    }
+
     return (
-        <Window url="admin.humorproject.com/votes">
+        <div className="stack">
+            <Window url="admin.humorproject.com/votes/timeline">
+                <p className="label">Votes over time:</p>
+                <VotesTimeline points={points} />
+            </Window>
+            <Window url="admin.humorproject.com/votes">
             <h1 className="label title">Votes ({votes?.length ?? 0}):</h1>
             <div className="table-wrap">
                 <table className="admin-table">
@@ -39,6 +60,7 @@ export default async function Votes() {
                     </tbody>
                 </table>
             </div>
-        </Window>
+            </Window>
+        </div>
     );
 }
